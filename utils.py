@@ -1,13 +1,7 @@
 import streamlit as st
 
-def format_currency(amount, currency='USD'):
-    symbols = {
-        'USD': '$',
-        'ZWG': 'ZWG',
-        'ZAR': 'R'
-    }
-    symbol = symbols.get(currency, '$')
-    return f"{symbol}{amount:,.2f}"
+def format_currency(amount):
+    return f"${amount:,.2f}"
 
 def calculate_tithe(amount):
     return amount * 0.1

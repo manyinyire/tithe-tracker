@@ -29,13 +29,11 @@ with st.sidebar:
     st.markdown("### Record New Income")
     amount = st.number_input("Amount", min_value=0.0, format="%f")
     source = st.selectbox("Source", INCOME_SOURCES)
-    currencies = [curr['code'] for curr in db.get_supported_currencies()]
-    currency = st.selectbox("Currency", currencies, index=0)
     description = st.text_area("Description")
     
     if st.button("Record Income"):
         if amount > 0:
-            db.add_income(amount, source, description, currency)
+            db.add_income(amount, source, description)
             st.success("Income recorded successfully!")
         else:
             st.error("Please enter a valid amount")
@@ -44,12 +42,11 @@ with st.sidebar:
     
     st.markdown("### Record Tithe Payment")
     tithe_amount = st.number_input("Tithe Amount", min_value=0.0, format="%f")
-    payment_currency = st.selectbox("Payment Currency", currencies, index=0, key="payment_currency")
     notes = st.text_area("Payment Notes")
     
     if st.button("Record Tithe Payment"):
         if tithe_amount > 0:
-            db.add_tithe_payment(tithe_amount, notes, payment_currency)
+            db.add_tithe_payment(tithe_amount, notes)
             verse = random.choice(TITHE_VERSES)
             st.success(f"🙏 Tithe payment recorded successfully! May God bless your faithful giving.\n\n*{verse}*")
         else:
