@@ -35,12 +35,8 @@ with st.sidebar:
     
     if st.button("Record Income"):
         if amount > 0:
-            try:
-                usd_amount = db.convert_to_usd(amount, currency)
-                db.add_income(amount, source, description, currency)
-                st.success(f"Income recorded successfully! Equivalent in USD: {format_currency(usd_amount, 'USD')}")
-            except ValueError as e:
-                st.error(str(e))
+            db.add_income(amount, source, description, currency)
+            st.success("Income recorded successfully!")
         else:
             st.error("Please enter a valid amount")
     
@@ -53,21 +49,14 @@ with st.sidebar:
     
     if st.button("Record Tithe Payment"):
         if tithe_amount > 0:
-            try:
-                usd_amount = db.convert_to_usd(tithe_amount, payment_currency)
-                db.add_tithe_payment(tithe_amount, notes, payment_currency)
-                verse = random.choice(TITHE_VERSES)
-                st.success(f"🙏 Tithe payment recorded successfully! Equivalent in USD: {format_currency(usd_amount, 'USD')}\nMay God bless your faithful giving.\n\n*{verse}*")
-            except ValueError as e:
-                st.error(str(e))
+            db.add_tithe_payment(tithe_amount, notes, payment_currency)
+            verse = random.choice(TITHE_VERSES)
+            st.success(f"🙏 Tithe payment recorded successfully! May God bless your faithful giving.\n\n*{verse}*")
         else:
             st.error("Please enter a valid amount")
 
 # Main content
-tab1, tab2 = st.tabs(["📊 Dashboard", "💱 Exchange Rates"])
-
-with tab1:
-    col1, col2, col3 = st.columns(3)
+col1, col2, col3 = st.columns(3)
 
 # Fetch tithe status
 tithe_status = db.get_tithe_status()
@@ -103,42 +92,6 @@ if income_summary:
 
 st.markdown("### Tithe Progress")
 progress_chart = create_tithe_progress_chart(total_tithe_due, total_tithe_paid)
-# Exchange Rates Tab
-with tab2:
-    st.markdown("### Exchange Rates Management")
-    st.markdown("Set today's exchange rates for converting to USD:")
-    
-    # Input fields for exchange rates
-    supported_currencies = ['ZWG', 'ZAR']
-    
-    for currency in supported_currencies:
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            rate = st.number_input(
-                f"1 {currency} equals how many USD?",
-                min_value=0.0001,
-                step=0.0001,
-                format="%.4f",
-                key=f"rate_{currency}"
-            )
-        with col2:
-            if st.button(f"Update {currency} Rate"):
-                db.update_exchange_rate(currency, rate)
-                st.success(f"{currency} exchange rate updated successfully!")
-    
-    st.markdown("### Current Rates")
-    rates = db.get_todays_rates()
-    if rates:
-        for rate in rates:
-            st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">{rate['currency_code']} to USD</div>
-                    <div class="metric-value">1 {rate['currency_code']} = {format_currency(rate['rate'], 'USD')}</div>
-                </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.info("No exchange rates available for today.")
-
 st.plotly_chart(progress_chart, use_container_width=True)
 
 # Recent transactions

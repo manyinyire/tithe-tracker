@@ -1,90 +1,40 @@
 import os
-from datetime import datetime
-from psycopg2.extras import RealDictCursor
 import psycopg2
+from psycopg2.extras import RealDictCursor
+from datetime import datetime
 
 class Database:
     def __init__(self):
-        self.conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        self.conn = psycopg2.connect(
+            host=os.environ['PGHOST'],
+            database=os.environ['PGDATABASE'],
+            user=os.environ['PGUSER'],
+            password=os.environ['PGPASSWORD'],
+            port=os.environ['PGPORT']
+        )
+        self._create_tables()
+
+    def _create_tables(self):
         with self.conn.cursor() as cur:
-            # Create income table with currency support
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS income (
                     id SERIAL PRIMARY KEY,
-                    amount DECIMAL(15, 2) NOT NULL,
-                    source VARCHAR(255) NOT NULL,
+                    amount DECIMAL(10,2) NOT NULL,
+                    source VARCHAR(50) NOT NULL,
                     description TEXT,
                     date DATE NOT NULL,
-                    currency VARCHAR(3) DEFAULT 'USD'
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
-            """)
-            
-            # Create tithe_payments table with currency support
-            cur.execute("""
+                
                 CREATE TABLE IF NOT EXISTS tithe_payments (
                     id SERIAL PRIMARY KEY,
-                    amount DECIMAL(15, 2) NOT NULL,
+                    amount DECIMAL(10,2) NOT NULL,
                     payment_date DATE NOT NULL,
                     notes TEXT,
-                    currency VARCHAR(3) DEFAULT 'USD'
-                );
-            """)
-            
-            # Create exchange_rates table
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS exchange_rates (
-                    id SERIAL PRIMARY KEY,
-                    currency_code VARCHAR(3) NOT NULL,
-                    date DATE NOT NULL,
-                    rate DECIMAL(10, 4) NOT NULL,
-                    UNIQUE(currency_code, date)
-                );
-            """)
-            
-            # Create supported_currencies table
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS supported_currencies (
-                    code VARCHAR(3) PRIMARY KEY,
-                    name VARCHAR(50) NOT NULL,
-                    symbol VARCHAR(5) NOT NULL
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
             self.conn.commit()
-
-    def get_exchange_rate(self, currency_code, date=None):
-        if currency_code == 'USD':
-            return 1.0
-        
-        if date is None:
-            date = datetime.now().date()
-            
-        with self.conn.cursor() as cur:
-            cur.execute(
-                "SELECT rate FROM exchange_rates WHERE currency_code = %s AND date = %s",
-                (currency_code, date)
-            )
-            result = cur.fetchone()
-            return float(result[0]) if result else None
-    def update_exchange_rate(self, currency_code, rate):
-        today = datetime.now().date()
-        with self.conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO exchange_rates (currency_code, date, rate)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (currency_code, date)
-                DO UPDATE SET rate = EXCLUDED.rate
-            """, (currency_code, today, rate))
-            self.conn.commit()
-
-    def convert_to_usd(self, amount, currency_code, date=None):
-        if currency_code == 'USD':
-            return amount
-        
-        rate = self.get_exchange_rate(currency_code, date)
-        if rate is None:
-            raise ValueError(f"No exchange rate found for {currency_code}")
-        
-        return amount * rate
 
     def get_supported_currencies(self):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -120,57 +70,28 @@ class Database:
     def get_recent_transactions(self, limit=10):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT amount, source, date, description, currency
+                SELECT amount, source, date, description
                 FROM income
                 ORDER BY date DESC
                 LIMIT %s
             """, (limit,))
             return cur.fetchall()
 
-    def get_todays_rates(self):
-        today = datetime.now().date()
-        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT currency_code, rate 
-                FROM exchange_rates 
-                WHERE date = %s 
-                ORDER BY currency_code
-            """, (today,))
-            return cur.fetchall()
-
     def get_tithe_status(self):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                WITH converted_income AS (
-                    SELECT 
-                        amount * COALESCE(e.rate, 1) as usd_amount
-                    FROM income i
-                    LEFT JOIN exchange_rates e ON i.currency = e.currency_code 
-                        AND i.date = e.date
-                    WHERE i.currency != 'USD'
-                    UNION ALL
-                    SELECT amount as usd_amount
-                    FROM income 
-                    WHERE currency = 'USD'
+                WITH total_income AS (
+                    SELECT COALESCE(SUM(amount), 0) as income_sum
+                    FROM income
                 ),
-                converted_payments AS (
-                    SELECT 
-                        amount * COALESCE(e.rate, 1) as usd_amount
-                    FROM tithe_payments t
-                    LEFT JOIN exchange_rates e ON t.currency = e.currency_code 
-                        AND t.payment_date = e.date
-                    WHERE t.currency != 'USD'
-                    UNION ALL
-                    SELECT amount as usd_amount
-                    FROM tithe_payments 
-                    WHERE currency = 'USD'
+                total_payments AS (
+                    SELECT COALESCE(SUM(amount), 0) as payment_sum
+                    FROM tithe_payments
                 )
                 SELECT 
-                    (COALESCE(SUM(i.usd_amount), 0) * 0.1) as total_tithe_due,
-                    COALESCE(SUM(p.usd_amount), 0) as total_tithe_paid,
-                    (COALESCE(SUM(i.usd_amount), 0) * 0.1 - COALESCE(SUM(p.usd_amount), 0)) as remaining_balance
-                FROM 
-                    (SELECT COALESCE(SUM(usd_amount), 0) as usd_amount FROM converted_income) i,
-                    (SELECT COALESCE(SUM(usd_amount), 0) as usd_amount FROM converted_payments) p
+                    (total_income.income_sum * 0.1) as total_tithe_due,
+                    total_payments.payment_sum as total_tithe_paid,
+                    ((total_income.income_sum * 0.9) - total_payments.payment_sum) as remaining_balance
+                FROM total_income, total_payments
             """)
             return cur.fetchone()
