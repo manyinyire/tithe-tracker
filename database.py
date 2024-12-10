@@ -36,19 +36,24 @@ class Database:
             """)
             self.conn.commit()
 
-    def add_income(self, amount, source, description):
+    def get_supported_currencies(self):
+        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT code, name, symbol FROM supported_currencies ORDER BY code")
+            return cur.fetchall()
+
+    def add_income(self, amount, source, description, currency='USD'):
         with self.conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO income (amount, source, description, date) VALUES (%s, %s, %s, %s)",
-                (amount, source, description, datetime.now().date())
+                "INSERT INTO income (amount, source, description, date, currency) VALUES (%s, %s, %s, %s, %s)",
+                (amount, source, description, datetime.now().date(), currency)
             )
             self.conn.commit()
 
-    def add_tithe_payment(self, amount, notes):
+    def add_tithe_payment(self, amount, notes, currency='USD'):
         with self.conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO tithe_payments (amount, payment_date, notes) VALUES (%s, %s, %s)",
-                (amount, datetime.now().date(), notes)
+                "INSERT INTO tithe_payments (amount, payment_date, notes, currency) VALUES (%s, %s, %s, %s)",
+                (amount, datetime.now().date(), notes, currency)
             )
             self.conn.commit()
 
