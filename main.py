@@ -105,9 +105,28 @@ st.markdown("### Tithe Progress")
 progress_chart = create_tithe_progress_chart(total_tithe_due, total_tithe_paid)
 # Exchange Rates Tab
 with tab2:
-    st.markdown("### Today's Exchange Rates")
-    st.markdown("Current rates for converting to USD:")
+    st.markdown("### Exchange Rates Management")
+    st.markdown("Set today's exchange rates for converting to USD:")
     
+    # Input fields for exchange rates
+    supported_currencies = ['ZWG', 'ZAR']
+    
+    for currency in supported_currencies:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            rate = st.number_input(
+                f"1 {currency} equals how many USD?",
+                min_value=0.0001,
+                step=0.0001,
+                format="%.4f",
+                key=f"rate_{currency}"
+            )
+        with col2:
+            if st.button(f"Update {currency} Rate"):
+                db.update_exchange_rate(currency, rate)
+                st.success(f"{currency} exchange rate updated successfully!")
+    
+    st.markdown("### Current Rates")
     rates = db.get_todays_rates()
     if rates:
         for rate in rates:

@@ -65,6 +65,16 @@ class Database:
             )
             result = cur.fetchone()
             return float(result[0]) if result else None
+    def update_exchange_rate(self, currency_code, rate):
+        today = datetime.now().date()
+        with self.conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO exchange_rates (currency_code, date, rate)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (currency_code, date)
+                DO UPDATE SET rate = EXCLUDED.rate
+            """, (currency_code, today, rate))
+            self.conn.commit()
 
     def convert_to_usd(self, amount, currency_code, date=None):
         if currency_code == 'USD':
