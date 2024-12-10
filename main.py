@@ -137,60 +137,59 @@ elif st.session_state.user is not None:
             total_tithe_paid = 0.0
 
 # Display metrics
-with col1:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.markdown('<div class="metric-label">Total Tithe Due</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="metric-value">{format_currency(total_tithe_due)}</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        with col1:
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.markdown('<div class="metric-label">Total Tithe Due</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-value">{format_currency(total_tithe_due)}</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
-with col2:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.markdown('<div class="metric-label">Total Tithe Paid</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="metric-value">{format_currency(total_tithe_paid)}</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        with col2:
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.markdown('<div class="metric-label">Total Tithe Paid</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="metric-value">{format_currency(total_tithe_paid)}</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
-with col3:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-    st.markdown('<div class="metric-label">Remaining Balance</div>', unsafe_allow_html=True)
-    remaining_balance = float(tithe_status['remaining_balance'])
-    st.markdown(f'<div class="metric-value">{format_currency(remaining_balance)}</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        with col3:
+            st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+            st.markdown('<div class="metric-label">Remaining Balance</div>', unsafe_allow_html=True)
+            remaining_balance = float(tithe_status['remaining_balance'])
+            st.markdown(f'<div class="metric-value">{format_currency(remaining_balance)}</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # Visualizations
-st.markdown("### Income Distribution")
-income_summary = db.get_income_summary(st.session_state.user["id"])
-if income_summary:
-    chart = create_income_distribution_chart(income_summary)
-    st.plotly_chart(chart, use_container_width=True)
+        st.markdown("### Income Distribution")
+        income_summary = db.get_income_summary(st.session_state.user["id"])
+        if income_summary:
+            chart = create_income_distribution_chart(income_summary)
+            st.plotly_chart(chart, use_container_width=True)
 
-st.markdown("### Tithe Progress")
-progress_chart = create_tithe_progress_chart(total_tithe_due, total_tithe_paid)
-st.plotly_chart(progress_chart, use_container_width=True)
+        st.markdown("### Tithe Progress")
+        progress_chart = create_tithe_progress_chart(total_tithe_due, total_tithe_paid)
+        st.plotly_chart(progress_chart, use_container_width=True)
 
-# Recurring Income Section
-st.markdown("### 🔄 Recurring Income")
-recurring_incomes = db.get_recurring_income()
-if recurring_incomes:
-    for income in recurring_incomes:
-        with st.expander(f"{income['source']} - {format_currency(income['amount'])} ({income['frequency']})"):
-            st.write(f"**Description:** {income['description']}")
-            st.write(f"**Next Due:** {income['next_due_date'].strftime('%Y-%m-%d')}")
-            st.write(f"**Frequency:** {income['frequency']}")
-            days_until_due = (income['next_due_date'] - datetime.now().date()).days
-            if days_until_due <= 7:
-                st.warning(f"⚠️ Due in {days_until_due} days!")
-            else:
-                st.info(f"Next payment in {days_until_due} days")
+        # Recurring Income Section
+        st.markdown("### 🔄 Recurring Income")
+        recurring_incomes = db.get_recurring_income()
+        if recurring_incomes:
+            for income in recurring_incomes:
+                with st.expander(f"{income['source']} - {format_currency(income['amount'])} ({income['frequency']})"):
+                    st.write(f"**Description:** {income['description']}")
+                    st.write(f"**Next Due:** {income['next_due_date'].strftime('%Y-%m-%d')}")
+                    st.write(f"**Frequency:** {income['frequency']}")
+                    days_until_due = (income['next_due_date'] - datetime.now().date()).days
+                    if days_until_due <= 7:
+                        st.warning(f"⚠️ Due in {days_until_due} days!")
+                    else:
+                        st.info(f"Next payment in {days_until_due} days")
+        else:
+            st.info("No recurring income set up yet.")
 
-else:
-    st.info("No recurring income set up yet.")
-
-# Recent transactions
-st.markdown("### Recent Transactions")
-transactions = db.get_recent_transactions(st.session_state.user["id"])
-if transactions:
-    df = pd.DataFrame(transactions)
-    df['amount'] = df['amount'].apply(format_currency)
-    st.dataframe(df, use_container_width=True)
-else:
-    st.info("No transactions recorded yet.")
+        # Recent transactions
+        st.markdown("### Recent Transactions")
+        transactions = db.get_recent_transactions(st.session_state.user["id"])
+        if transactions:
+            df = pd.DataFrame(transactions)
+            df['amount'] = df['amount'].apply(format_currency)
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("No transactions recorded yet.")
