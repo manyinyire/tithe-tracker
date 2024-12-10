@@ -64,7 +64,10 @@ with st.sidebar:
             st.error("Please enter a valid amount")
 
 # Main content
-col1, col2, col3 = st.columns(3)
+tab1, tab2 = st.tabs(["📊 Dashboard", "💱 Exchange Rates"])
+
+with tab1:
+    col1, col2, col3 = st.columns(3)
 
 # Fetch tithe status
 tithe_status = db.get_tithe_status()
@@ -100,6 +103,23 @@ if income_summary:
 
 st.markdown("### Tithe Progress")
 progress_chart = create_tithe_progress_chart(total_tithe_due, total_tithe_paid)
+# Exchange Rates Tab
+with tab2:
+    st.markdown("### Today's Exchange Rates")
+    st.markdown("Current rates for converting to USD:")
+    
+    rates = db.get_todays_rates()
+    if rates:
+        for rate in rates:
+            st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">{rate['currency_code']} to USD</div>
+                    <div class="metric-value">1 {rate['currency_code']} = {format_currency(rate['rate'], 'USD')}</div>
+                </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("No exchange rates available for today.")
+
 st.plotly_chart(progress_chart, use_container_width=True)
 
 # Recent transactions

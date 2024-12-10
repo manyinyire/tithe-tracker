@@ -117,6 +117,17 @@ class Database:
             """, (limit,))
             return cur.fetchall()
 
+    def get_todays_rates(self):
+        today = datetime.now().date()
+        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT currency_code, rate 
+                FROM exchange_rates 
+                WHERE date = %s 
+                ORDER BY currency_code
+            """, (today,))
+            return cur.fetchall()
+
     def get_tithe_status(self):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
