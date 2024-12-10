@@ -22,6 +22,8 @@ st.set_page_config(
 # Initialize session state
 if 'user' not in st.session_state:
     st.session_state.user = None
+if 'authentication_status' not in st.session_state:
+    st.session_state.authentication_status = None
 
 def login_page():
     st.title("🙏 Welcome to Sacred Tithe Tracker")
@@ -37,7 +39,8 @@ def login_page():
                 user = auth_manager.authenticate_user(email, password)
                 if user:
                     st.session_state.user = user
-                    st.experimental_rerun()
+                    st.session_state.authentication_status = True
+                    st.rerun()
                 else:
                     st.error("Invalid email or password")
             else:
@@ -53,8 +56,7 @@ def login_page():
                 user = auth_manager.register_user(email, password, name)
                 if user:
                     st.success("Account created successfully! Please login.")
-                    st.session_state.user = user
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("Email already registered")
             else:
@@ -65,9 +67,9 @@ st.markdown(apply_custom_styles(), unsafe_allow_html=True)
 st.markdown(get_sacred_geometry_style(), unsafe_allow_html=True)
 
 # Show login page if user is not logged in
-if not st.session_state.user:
+if not st.session_state.authentication_status:
     login_page()
-else:
+elif st.session_state.user is not None:
     # Header with logout button
     col1, col2 = st.columns([6,1])
     with col1:
@@ -76,14 +78,15 @@ else:
     with col2:
         if st.button("Logout"):
             st.session_state.user = None
-            st.experimental_rerun()
+            st.session_state.authentication_status = None
+            st.rerun()
 
-# Sidebar for data entry
-with st.sidebar:
-    st.markdown("### Record New Income")
-    amount = st.number_input("Amount", min_value=0.0, format="%f")
-    source = st.selectbox("Source", INCOME_SOURCES)
-    description = st.text_area("Description")
+    # Sidebar for data entry
+    with st.sidebar:
+        st.markdown("### Record New Income")
+        amount = st.number_input("Amount", min_value=0.0, format="%f")
+        source = st.selectbox("Source", INCOME_SOURCES)
+        description = st.text_area("Description")
     
     # Recurring income options
     is_recurring = st.checkbox("Is this a recurring income?")
@@ -115,13 +118,23 @@ with st.sidebar:
         else:
             st.error("Please enter a valid amount")
 
-# Main content
-col1, col2, col3 = st.columns(3)
+# Main content area - only show when user is logged in
+    if st.session_state.authentication_status and st.session_state.user:
+        col1, col2, col3 = st.columns(3)
 
-# Fetch tithe status
-tithe_status = db.get_tithe_status(st.session_state.user["id"])
-total_tithe_due = float(tithe_status['total_tithe_due'])
-total_tithe_paid = float(tithe_status['total_tithe_paid'])
+        # Fetch tithe status
+        try:
+            tithe_status = db.get_tithe_status(st.session_state.user["id"])
+            if tithe_status:
+                total_tithe_due = float(tithe_status['total_tithe_due'])
+                total_tithe_paid = float(tithe_status['total_tithe_paid'])
+            else:
+                total_tithe_due = 0.0
+                total_tithe_paid = 0.0
+        except Exception as e:
+            st.error(f"Error fetching tithe status: {str(e)}")
+            total_tithe_due = 0.0
+            total_tithe_paid = 0.0
 
 # Display metrics
 with col1:
