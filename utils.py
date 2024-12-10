@@ -1,7 +1,19 @@
 import streamlit as st
 
-def format_currency(amount):
-    return f"${amount:,.2f}"
+SUPPORTED_CURRENCIES = {
+    'USD': {'symbol': '$', 'name': 'US Dollar'},
+    'EUR': {'symbol': '€', 'name': 'Euro'},
+    'GBP': {'symbol': '£', 'name': 'British Pound'},
+    'JPY': {'symbol': '¥', 'name': 'Japanese Yen'},
+    'AUD': {'symbol': 'A$', 'name': 'Australian Dollar'},
+    'CAD': {'symbol': 'C$', 'name': 'Canadian Dollar'},
+}
+
+def format_currency(amount, currency='USD'):
+    currency_info = SUPPORTED_CURRENCIES.get(currency, SUPPORTED_CURRENCIES['USD'])
+    if currency == 'JPY':  # JPY doesn't use decimal places
+        return f"{currency_info['symbol']}{int(amount):,}"
+    return f"{currency_info['symbol']}{amount:,.2f}"
 
 def calculate_tithe(amount):
     return amount * 0.1

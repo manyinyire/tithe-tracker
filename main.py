@@ -3,7 +3,11 @@ import pandas as pd
 from datetime import datetime
 from database import Database
 from auth import AuthManager
-from utils import format_currency, calculate_tithe, validate_amount, INCOME_SOURCES, get_sacred_geometry_style, TITHE_VERSES
+from utils import (
+    format_currency, calculate_tithe, validate_amount, 
+    INCOME_SOURCES, get_sacred_geometry_style, TITHE_VERSES,
+    SUPPORTED_CURRENCIES
+)
 import random
 from visualizations import create_income_distribution_chart, create_tithe_progress_chart
 from styles import apply_custom_styles
@@ -85,6 +89,7 @@ elif st.session_state.user is not None:
     with st.sidebar:
         st.markdown("### Record New Income")
         amount = st.number_input("Amount", min_value=0.0, format="%f")
+        currency = st.selectbox("Currency", options=list(SUPPORTED_CURRENCIES.keys()), format_func=lambda x: f"{x} - {SUPPORTED_CURRENCIES[x]['name']}")
         source = st.selectbox("Source", INCOME_SOURCES)
         description = st.text_area("Description")
     
@@ -99,7 +104,7 @@ elif st.session_state.user is not None:
     
     if st.button("Record Income"):
         if amount > 0:
-            db.add_income(st.session_state.user["id"], amount, source, description, is_recurring, frequency)
+            db.add_income(st.session_state.user["id"], amount, source, description, currency, is_recurring, frequency)
             st.success("Income recorded successfully!")
         else:
             st.error("Please enter a valid amount")

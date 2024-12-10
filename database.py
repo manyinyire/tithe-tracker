@@ -49,7 +49,7 @@ class Database:
             """)
             self.conn.commit()
 
-    def add_income(self, user_id, amount, source, description, is_recurring=False, frequency=None):
+    def add_income(self, user_id, amount, source, description, currency='USD', is_recurring=False, frequency=None):
         with self.conn.cursor() as cur:
             next_due_date = None
             if is_recurring and frequency:
@@ -63,10 +63,10 @@ class Database:
             
             cur.execute(
                 """INSERT INTO income 
-                   (user_id, amount, source, description, date, is_recurring, frequency, next_due_date) 
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                   (user_id, amount, source, description, date, is_recurring, frequency, next_due_date, currency) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
                 (user_id, amount, source, description, datetime.now().date(), 
-                 is_recurring, frequency, next_due_date)
+                 is_recurring, frequency, next_due_date, currency)
             )
             self.conn.commit()
             
