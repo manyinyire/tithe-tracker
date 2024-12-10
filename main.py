@@ -2,13 +2,15 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from database import Database
+from auth import AuthManager
 from utils import format_currency, calculate_tithe, validate_amount, INCOME_SOURCES, get_sacred_geometry_style, TITHE_VERSES
 import random
 from visualizations import create_income_distribution_chart, create_tithe_progress_chart
 from styles import apply_custom_styles
 
-# Initialize database
+# Initialize database and auth
 db = Database()
+auth_manager = AuthManager(db)
 
 # Page config
 st.set_page_config(
@@ -17,13 +19,64 @@ st.set_page_config(
     layout="wide"
 )
 
+# Initialize session state
+if 'user' not in st.session_state:
+    st.session_state.user = None
+
+def login_page():
+    st.title("🙏 Welcome to Sacred Tithe Tracker")
+    
+    tab1, tab2 = st.tabs(["Login", "Sign Up"])
+    
+    with tab1:
+        email = st.text_input("Email", key="login_email")
+        password = st.text_input("Password", type="password", key="login_password")
+        
+        if st.button("Login"):
+            if email and password:
+                user = auth_manager.authenticate_user(email, password)
+                if user:
+                    st.session_state.user = user
+                    st.experimental_rerun()
+                else:
+                    st.error("Invalid email or password")
+            else:
+                st.error("Please fill in all fields")
+    
+    with tab2:
+        name = st.text_input("Name", key="signup_name")
+        email = st.text_input("Email", key="signup_email")
+        password = st.text_input("Password", type="password", key="signup_password")
+        
+        if st.button("Sign Up"):
+            if name and email and password:
+                user = auth_manager.register_user(email, password, name)
+                if user:
+                    st.success("Account created successfully! Please login.")
+                    st.session_state.user = user
+                    st.experimental_rerun()
+                else:
+                    st.error("Email already registered")
+            else:
+                st.error("Please fill in all fields")
+
 # Apply custom styles
 st.markdown(apply_custom_styles(), unsafe_allow_html=True)
 st.markdown(get_sacred_geometry_style(), unsafe_allow_html=True)
 
-# Header
-st.title("🙏 Sacred Tithe Tracker")
-st.markdown("*'Bring the whole tithe into the storehouse...' - Malachi 3:10*")
+# Show login page if user is not logged in
+if not st.session_state.user:
+    login_page()
+else:
+    # Header with logout button
+    col1, col2 = st.columns([6,1])
+    with col1:
+        st.title("🙏 Sacred Tithe Tracker")
+        st.markdown("*'Bring the whole tithe into the storehouse...' - Malachi 3:10*")
+    with col2:
+        if st.button("Logout"):
+            st.session_state.user = None
+            st.experimental_rerun()
 
 # Sidebar for data entry
 with st.sidebar:
@@ -43,7 +96,7 @@ with st.sidebar:
     
     if st.button("Record Income"):
         if amount > 0:
-            db.add_income(amount, source, description, is_recurring, frequency)
+            db.add_income(st.session_state.user["id"], amount, source, description, is_recurring, frequency)
             st.success("Income recorded successfully!")
         else:
             st.error("Please enter a valid amount")
@@ -56,7 +109,7 @@ with st.sidebar:
     
     if st.button("Record Tithe Payment"):
         if tithe_amount > 0:
-            db.add_tithe_payment(tithe_amount, notes)
+            db.add_tithe_payment(st.session_state.user["id"], tithe_amount, notes)
             verse = random.choice(TITHE_VERSES)
             st.success(f"🙏 Tithe payment recorded successfully! May God bless your faithful giving.\n\n*{verse}*")
         else:
@@ -66,7 +119,7 @@ with st.sidebar:
 col1, col2, col3 = st.columns(3)
 
 # Fetch tithe status
-tithe_status = db.get_tithe_status()
+tithe_status = db.get_tithe_status(st.session_state.user["id"])
 total_tithe_due = float(tithe_status['total_tithe_due'])
 total_tithe_paid = float(tithe_status['total_tithe_paid'])
 
@@ -92,7 +145,7 @@ with col3:
 
 # Visualizations
 st.markdown("### Income Distribution")
-income_summary = db.get_income_summary()
+income_summary = db.get_income_summary(st.session_state.user["id"])
 if income_summary:
     chart = create_income_distribution_chart(income_summary)
     st.plotly_chart(chart, use_container_width=True)
@@ -121,7 +174,7 @@ else:
 
 # Recent transactions
 st.markdown("### Recent Transactions")
-transactions = db.get_recent_transactions()
+transactions = db.get_recent_transactions(st.session_state.user["id"])
 if transactions:
     df = pd.DataFrame(transactions)
     df['amount'] = df['amount'].apply(format_currency)
