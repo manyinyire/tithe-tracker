@@ -74,8 +74,8 @@ with col2:
 with col3:
     st.markdown('<div class="metric-card">', unsafe_allow_html=True)
     st.markdown('<div class="metric-label">Remaining Balance</div>', unsafe_allow_html=True)
-    remaining = total_tithe_due - total_tithe_paid
-    st.markdown(f'<div class="metric-value">{format_currency(remaining)}</div>', unsafe_allow_html=True)
+    remaining_balance = float(tithe_status['remaining_balance'])
+    st.markdown(f'<div class="metric-value">{format_currency(remaining_balance)}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # Visualizations

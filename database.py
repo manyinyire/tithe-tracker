@@ -75,17 +75,18 @@ class Database:
     def get_tithe_status(self):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                WITH tithe_due AS (
-                    SELECT COALESCE(SUM(amount) * 0.1, 0) as total_tithe_due
+                WITH total_income AS (
+                    SELECT COALESCE(SUM(amount), 0) as income_sum
                     FROM income
                 ),
-                tithe_paid AS (
-                    SELECT COALESCE(SUM(amount), 0) as total_tithe_paid
+                total_payments AS (
+                    SELECT COALESCE(SUM(amount), 0) as payment_sum
                     FROM tithe_payments
                 )
                 SELECT 
-                    tithe_due.total_tithe_due,
-                    tithe_paid.total_tithe_paid
-                FROM tithe_due, tithe_paid
+                    (total_income.income_sum * 0.1) as total_tithe_due,
+                    total_payments.payment_sum as total_tithe_paid,
+                    (total_income.income_sum * 0.1) - total_payments.payment_sum as remaining_balance
+                FROM total_income, total_payments
             """)
             return cur.fetchone()
