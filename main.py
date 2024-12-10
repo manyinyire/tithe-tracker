@@ -35,8 +35,12 @@ with st.sidebar:
     
     if st.button("Record Income"):
         if amount > 0:
-            db.add_income(amount, source, description, currency)
-            st.success("Income recorded successfully!")
+            try:
+                usd_amount = db.convert_to_usd(amount, currency)
+                db.add_income(amount, source, description, currency)
+                st.success(f"Income recorded successfully! Equivalent in USD: {format_currency(usd_amount, 'USD')}")
+            except ValueError as e:
+                st.error(str(e))
         else:
             st.error("Please enter a valid amount")
     
@@ -49,9 +53,13 @@ with st.sidebar:
     
     if st.button("Record Tithe Payment"):
         if tithe_amount > 0:
-            db.add_tithe_payment(tithe_amount, notes, payment_currency)
-            verse = random.choice(TITHE_VERSES)
-            st.success(f"🙏 Tithe payment recorded successfully! May God bless your faithful giving.\n\n*{verse}*")
+            try:
+                usd_amount = db.convert_to_usd(tithe_amount, payment_currency)
+                db.add_tithe_payment(tithe_amount, notes, payment_currency)
+                verse = random.choice(TITHE_VERSES)
+                st.success(f"🙏 Tithe payment recorded successfully! Equivalent in USD: {format_currency(usd_amount, 'USD')}\nMay God bless your faithful giving.\n\n*{verse}*")
+            except ValueError as e:
+                st.error(str(e))
         else:
             st.error("Please enter a valid amount")
 

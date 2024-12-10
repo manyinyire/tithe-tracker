@@ -36,6 +36,31 @@ class Database:
             """)
             self.conn.commit()
 
+    def get_exchange_rate(self, currency_code, date=None):
+        if currency_code == 'USD':
+            return 1.0
+        
+        if date is None:
+            date = datetime.now().date()
+            
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT rate FROM exchange_rates WHERE currency_code = %s AND date = %s",
+                (currency_code, date)
+            )
+            result = cur.fetchone()
+            return float(result[0]) if result else None
+
+    def convert_to_usd(self, amount, currency_code, date=None):
+        if currency_code == 'USD':
+            return amount
+        
+        rate = self.get_exchange_rate(currency_code, date)
+        if rate is None:
+            raise ValueError(f"No exchange rate found for {currency_code}")
+        
+        return amount * rate
+
     def get_supported_currencies(self):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("SELECT code, name, symbol FROM supported_currencies ORDER BY code")
@@ -80,18 +105,44 @@ class Database:
     def get_tithe_status(self):
         with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                WITH total_income AS (
-                    SELECT COALESCE(SUM(amount), 0) as income_sum
-                    FROM income
+                WITH converted_income AS (
+                    SELECT 
+                        i.amount,
+                        i.currency,
+                        i.date,
+                        COALESCE(e.rate, 1) as rate,
+                        i.amount * COALESCE(e.rate, 1) as usd_amount
+                    FROM income i
+                    LEFT JOIN exchange_rates e ON i.currency = e.currency_code 
+                        AND i.date = e.date
+                    WHERE i.currency != 'USD' 
+                    UNION ALL
+                    SELECT amount, currency, date, 1 as rate, amount as usd_amount
+                    FROM income 
+                    WHERE currency = 'USD'
                 ),
-                total_payments AS (
-                    SELECT COALESCE(SUM(amount), 0) as payment_sum
-                    FROM tithe_payments
+                converted_payments AS (
+                    SELECT 
+                        t.amount,
+                        t.currency,
+                        t.payment_date as date,
+                        COALESCE(e.rate, 1) as rate,
+                        t.amount * COALESCE(e.rate, 1) as usd_amount
+                    FROM tithe_payments t
+                    LEFT JOIN exchange_rates e ON t.currency = e.currency_code 
+                        AND t.payment_date = e.date
+                    WHERE t.currency != 'USD'
+                    UNION ALL
+                    SELECT amount, currency, payment_date, 1 as rate, amount as usd_amount
+                    FROM tithe_payments 
+                    WHERE currency = 'USD'
                 )
                 SELECT 
-                    (total_income.income_sum * 0.1) as total_tithe_due,
-                    total_payments.payment_sum as total_tithe_paid,
-                    ((total_income.income_sum * 0.9) - total_payments.payment_sum) as remaining_balance
-                FROM total_income, total_payments
+                    (SUM(i.usd_amount) * 0.1) as total_tithe_due,
+                    SUM(p.usd_amount) as total_tithe_paid,
+                    ((SUM(i.usd_amount) * 0.9) - SUM(p.usd_amount)) as remaining_balance
+                FROM 
+                    (SELECT COALESCE(SUM(usd_amount), 0) as usd_amount FROM converted_income) i,
+                    (SELECT COALESCE(SUM(usd_amount), 0) as usd_amount FROM converted_payments) p
             """)
             return cur.fetchone()
