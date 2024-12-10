@@ -84,9 +84,9 @@ class Database:
                     FROM tithe_payments
                 )
                 SELECT 
-                    ((total_income.income_sum * 0.1) - total_payments.payment_sum) as total_tithe_due,
+                    (total_income.income_sum * 0.1) as total_tithe_due,
                     total_payments.payment_sum as total_tithe_paid,
-                    ((total_income.income_sum * 0.1) - total_payments.payment_sum) as remaining_balance
+                    ((total_income.income_sum * 0.9) - total_payments.payment_sum) as remaining_balance
                 FROM total_income, total_payments
             """)
             return cur.fetchone()
