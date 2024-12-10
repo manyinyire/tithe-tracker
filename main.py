@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 from database import Database
 from utils import format_currency, calculate_tithe, validate_amount, INCOME_SOURCES, get_sacred_geometry_style, TITHE_VERSES
 import random
@@ -99,6 +100,24 @@ if income_summary:
 st.markdown("### Tithe Progress")
 progress_chart = create_tithe_progress_chart(total_tithe_due, total_tithe_paid)
 st.plotly_chart(progress_chart, use_container_width=True)
+
+# Recurring Income Section
+st.markdown("### 🔄 Recurring Income")
+recurring_incomes = db.get_recurring_income()
+if recurring_incomes:
+    for income in recurring_incomes:
+        with st.expander(f"{income['source']} - {format_currency(income['amount'])} ({income['frequency']})"):
+            st.write(f"**Description:** {income['description']}")
+            st.write(f"**Next Due:** {income['next_due_date'].strftime('%Y-%m-%d')}")
+            st.write(f"**Frequency:** {income['frequency']}")
+            days_until_due = (income['next_due_date'] - datetime.now().date()).days
+            if days_until_due <= 7:
+                st.warning(f"⚠️ Due in {days_until_due} days!")
+            else:
+                st.info(f"Next payment in {days_until_due} days")
+
+else:
+    st.info("No recurring income set up yet.")
 
 # Recent transactions
 st.markdown("### Recent Transactions")
