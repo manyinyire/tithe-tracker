@@ -1,5 +1,4 @@
 import streamlit as st
-from datetime import datetime
 
 def format_currency(amount):
     return f"${amount:,.2f}"
@@ -7,14 +6,22 @@ def format_currency(amount):
 def calculate_tithe(amount):
     return amount * 0.1
 
-def validate_amount(amount):
+def validate_amount(amount_str):
     try:
-        amount = float(amount)
+        amount = float(amount_str)
         if amount <= 0:
-            return False, "Amount must be greater than zero"
+            return False, "Amount must be greater than 0"
         return True, amount
     except ValueError:
         return False, "Please enter a valid number"
+
+TITHE_VERSES = [
+    "Bring the whole tithe into the storehouse, that there may be food in my house. Test me in this, says the LORD Almighty. - Malachi 3:10",
+    "Give, and it will be given to you. - Luke 6:38",
+    "Each of you should give what you have decided in your heart to give, not reluctantly or under compulsion, for God loves a cheerful giver. - 2 Corinthians 9:7",
+    "Honor the LORD with your wealth, with the firstfruits of all your crops. - Proverbs 3:9",
+    "But who am I, and who are my people, that we should be able to give as generously as this? Everything comes from you, and we have given you only what comes from your hand. - 1 Chronicles 29:14"
+]
 
 INCOME_SOURCES = [
     "Salary",

@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 from database import Database
-from utils import format_currency, calculate_tithe, validate_amount, INCOME_SOURCES, get_sacred_geometry_style
+from utils import format_currency, calculate_tithe, validate_amount, INCOME_SOURCES, get_sacred_geometry_style, TITHE_VERSES
+import random
 from visualizations import create_income_distribution_chart, create_tithe_progress_chart
 from styles import apply_custom_styles
 
@@ -46,7 +47,8 @@ with st.sidebar:
     if st.button("Record Tithe Payment"):
         if tithe_amount > 0:
             db.add_tithe_payment(tithe_amount, notes)
-            st.success("Tithe payment recorded successfully!")
+            verse = random.choice(TITHE_VERSES)
+            st.success(f"🙏 Tithe payment recorded successfully! May God bless your faithful giving.\n\n*{verse}*")
         else:
             st.error("Please enter a valid amount")
 
