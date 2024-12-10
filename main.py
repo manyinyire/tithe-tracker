@@ -31,9 +31,18 @@ with st.sidebar:
     source = st.selectbox("Source", INCOME_SOURCES)
     description = st.text_area("Description")
     
+    # Recurring income options
+    is_recurring = st.checkbox("Is this a recurring income?")
+    frequency = None
+    if is_recurring:
+        frequency = st.selectbox(
+            "Frequency",
+            ["Weekly", "Monthly", "Yearly"]
+        )
+    
     if st.button("Record Income"):
         if amount > 0:
-            db.add_income(amount, source, description)
+            db.add_income(amount, source, description, is_recurring, frequency)
             st.success("Income recorded successfully!")
         else:
             st.error("Please enter a valid amount")

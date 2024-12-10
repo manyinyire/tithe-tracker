@@ -1,7 +1,7 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class Database:
     def __init__(self):
@@ -23,6 +23,9 @@ class Database:
                     source VARCHAR(50) NOT NULL,
                     description TEXT,
                     date DATE NOT NULL,
+                    is_recurring BOOLEAN DEFAULT FALSE,
+                    frequency VARCHAR(20),
+                    next_due_date DATE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
                 
@@ -36,13 +39,35 @@ class Database:
             """)
             self.conn.commit()
 
-    def add_income(self, amount, source, description):
+    def add_income(self, amount, source, description, is_recurring=False, frequency=None):
         with self.conn.cursor() as cur:
+            next_due_date = None
+            if is_recurring and frequency:
+                today = datetime.now().date()
+                if frequency == 'Weekly':
+                    next_due_date = today + timedelta(days=7)
+                elif frequency == 'Monthly':
+                    next_due_date = today + timedelta(days=30)
+                elif frequency == 'Yearly':
+                    next_due_date = today + timedelta(days=365)
+            
             cur.execute(
-                "INSERT INTO income (amount, source, description, date) VALUES (%s, %s, %s, %s)",
-                (amount, source, description, datetime.now().date())
+                """INSERT INTO income 
+                   (amount, source, description, date, is_recurring, frequency, next_due_date) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (amount, source, description, datetime.now().date(), 
+                 is_recurring, frequency, next_due_date)
             )
             self.conn.commit()
+            
+    def get_recurring_income(self):
+        with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT * FROM income 
+                WHERE is_recurring = TRUE 
+                ORDER BY next_due_date ASC
+            """)
+            return cur.fetchall()
 
     def add_tithe_payment(self, amount, notes):
         with self.conn.cursor() as cur:
