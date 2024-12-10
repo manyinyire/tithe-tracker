@@ -99,3 +99,40 @@ class AuthManager:
                 "email": user[1],
                 "name": user[2]
             }
+
+    def update_user_profile(self, user_id: int, name: str = None, email: str = None, password: str = None) -> dict:
+        """Update user profile information"""
+        updates = []
+        values = []
+        if name:
+            updates.append("name = %s")
+            values.append(name)
+        if email:
+            updates.append("email = %s")
+            values.append(email)
+        if password:
+            updates.append("password_hash = %s")
+            values.append(get_password_hash(password))
+        
+        if not updates:
+            return None
+
+        with self.db.conn.cursor() as cur:
+            query = f"""
+                UPDATE users 
+                SET {', '.join(updates)}
+                WHERE id = %s
+                RETURNING id, email, name
+            """
+            values.append(user_id)
+            cur.execute(query, values)
+            user = cur.fetchone()
+            self.db.conn.commit()
+            
+            if user is None:
+                return None
+            return {
+                "id": user[0],
+                "email": user[1],
+                "name": user[2]
+            }

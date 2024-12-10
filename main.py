@@ -74,16 +74,41 @@ st.markdown(get_sacred_geometry_style(), unsafe_allow_html=True)
 if not st.session_state.authentication_status:
     login_page()
 elif st.session_state.user is not None:
-    # Header with logout button
-    col1, col2 = st.columns([6,1])
+    # Header with welcome message and navigation
+    col1, col2, col3 = st.columns([4,2,1])
     with col1:
         st.title("🙏 Sacred Tithe Tracker")
         st.markdown("*'Bring the whole tithe into the storehouse...' - Malachi 3:10*")
     with col2:
+        st.markdown(f"### Welcome, {st.session_state.user['name']}! 🌟")
+    with col3:
         if st.button("Logout"):
             st.session_state.user = None
             st.session_state.authentication_status = None
             st.rerun()
+    
+    # Profile Settings
+    with st.expander("⚙️ Profile Settings"):
+        st.markdown("### Update Your Profile")
+        with st.form("profile_update_form"):
+            new_name = st.text_input("Name", value=st.session_state.user["name"])
+            new_email = st.text_input("Email", value=st.session_state.user["email"])
+            new_password = st.text_input("New Password (leave blank to keep current)", type="password")
+            
+            if st.form_submit_button("Update Profile"):
+                if new_name or new_email or new_password:
+                    updated_user = auth_manager.update_user_profile(
+                        st.session_state.user["id"],
+                        name=new_name if new_name != st.session_state.user["name"] else None,
+                        email=new_email if new_email != st.session_state.user["email"] else None,
+                        password=new_password if new_password else None
+                    )
+                    if updated_user:
+                        st.session_state.user = updated_user
+                        st.success("Profile updated successfully! 🎉")
+                        st.rerun()
+                    else:
+                        st.error("Failed to update profile. Please try again.")
 
     # Sidebar for data entry
     with st.sidebar:
